@@ -194,10 +194,25 @@
     var _origXHROpen = XMLHttpRequest.prototype.open;
     XMLHttpRequest.prototype.open = function(method, url) {
         this.__cfgIntercept = typeof url === "string" && url.indexOf("config.services.api.unity.com/settings") !== -1;
+        this.__servicesConfigIntercept = typeof url === "string" && url.indexOf("UnityServicesProjectConfiguration.json") !== -1;
         return _origXHROpen.apply(this, arguments);
     };
     var _origXHRSend = XMLHttpRequest.prototype.send;
     XMLHttpRequest.prototype.send = function(body) {
+        if (this.__servicesConfigIntercept) {
+            var self = this;
+            var fallbackBody = "{}";
+            setTimeout(function() {
+                Object.defineProperty(self, "readyState", { get: function() { return 4; }, configurable: true });
+                Object.defineProperty(self, "status", { get: function() { return 200; }, configurable: true });
+                Object.defineProperty(self, "responseText", { get: function() { return fallbackBody; }, configurable: true });
+                Object.defineProperty(self, "response", { get: function() { return fallbackBody; }, configurable: true });
+                self.dispatchEvent(new Event("readystatechange"));
+                self.dispatchEvent(new Event("load"));
+                self.dispatchEvent(new Event("loadend"));
+            }, 0);
+            return;
+        }
         if (this.__cfgIntercept) {
             var self = this;
             var _settled = false;
