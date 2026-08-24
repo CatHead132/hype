@@ -672,11 +672,7 @@
                         return this.logger.log("Requesting adblock status (always false) (local)"), !1
                     }
                     async renderFakeAd(e) {
-                        return this.logger.log(`Requesting ${e} ad`), this.requestInProgress = !0, this.showOverlay(), this.overlay.innerHTML = `<h1>A ${e} ad would appear here</h1>`, new Promise(e => {
-                            window.setTimeout(() => {
-                                this.requestInProgress = !1, this.hideOverlay(), e()
-                            }, 5e3)
-                        })
+                        return this.requestInProgress = !1, Promise.resolve()
                     }
                     showOverlay() {
                         this.overlay.style.display = "flex"
@@ -6141,39 +6137,15 @@
                         }, 5e3)
                     }
                     prefetchAd(e) {
-                        if ("basic" === this.initInfo.launchFlow) throw new s.AdError("other", t.BASIC_LAUNCH_AD_DISABLED_ERROR);
-                        this.logger.log(`Prefetching ${e} ad`), this.sdk.postMessage({
-                            type: "prefetchAd",
-                            data: {
-                                adType: e
-                            }
-                        })
+                        this.logger.log(`Prefetching ${e} ad (local)`)
                     }
                     async requestAd(e, n) {
-                        if (this.adCallbacks = {
-                                adFinished: (null == n ? void 0 : n.adFinished) || a.adFinished,
-                                adError: (null == n ? void 0 : n.adError) || (null == n ? void 0 : n.adFinished) || a.adFinished,
-                                adStarted: (null == n ? void 0 : n.adStarted) || a.adStarted
-                            }, "basic" === this.initInfo.launchFlow) return (0, i.wrapUserFn)(this.adCallbacks.adError)(new s.AdError("other", t.BASIC_LAUNCH_AD_DISABLED_ERROR));
-                        if (this.logger.log(`Requesting ${e} ad`), this.requestInProgress) {
-                            this.logger.log("Ad already requested");
-                            const e = new s.AdError("other", "An ad request is already in progress");
-                            return (0, i.wrapUserFn)(this.adCallbacks.adError)(e)
-                        }
-                        this.requestInProgress = !0, this.sdk.postMessage({
-                            type: "requestAd",
-                            data: {
-                                adType: e
-                            }
-                        })
+                        this.requestInProgress = !1;
+                        if (n && n.adFinished) { try { (0, i.wrapUserFn)(n.adFinished)() } catch (t) {} }
+                        return Promise.resolve()
                     }
                     async hasAdblock() {
-                        return void 0 !== this.adblockDetectionResult ? this.adblockDetectionResult : (this.sdk.postMessage({
-                            type: "hasAdblock",
-                            data: {}
-                        }), this.logger.log("Requesting adblock status"), new Promise(e => {
-                            this.adblockDetectionResolvers.push(e)
-                        }))
+                        return this.logger.log("Requesting adblock status (always false) (local)"), !1
                     }
                     handleEvent(e) {
                         var t, n;

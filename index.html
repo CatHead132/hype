@@ -34,75 +34,6 @@
     };
 })();</script>
 <script>(function(){
-    function patchAd(adObj) {
-        if (!adObj || adObj.__hypePatched) return false;
-        if (adObj.renderFakeAd) {
-            adObj.renderFakeAd = async function() { this.requestInProgress = false; return Promise.resolve(); };
-        }
-        if (!adObj.addAdblockPopupListener) adObj.addAdblockPopupListener = function() {};
-        if (!adObj.removeAdblockPopupListener) adObj.removeAdblockPopupListener = function() {};
-        adObj.hasAdblock = async function() { return false; };
-        adObj.requestAd = async function(adType, callbacks) {
-            if (callbacks && callbacks.adFinished) { try { callbacks.adFinished(); } catch(e) {} }
-            return Promise.resolve();
-        };
-        adObj.prefetchAd = function() {};
-        adObj.__hypePatched = true;
-        return true;
-    }
-    function tryCGPatch() {
-        try {
-            if (!window.CrazyGames || !window.CrazyGames.SDK) return;
-            const sdk = window.CrazyGames.SDK;
-            try { patchAd(sdk.ad); } catch(e) {}
-            try { if (sdk.sdk && sdk.sdk.adModule) patchAd(sdk.sdk.adModule); } catch(e) {}
-        } catch(e) {}
-    }
-    var _cgPatchInterval = setInterval(tryCGPatch, 250);
-    setTimeout(function() { clearInterval(_cgPatchInterval); }, 60000);
-    const _realOpen = window.open.bind(window);
-    window.open = function(url, target, features) {
-        if (!url || url === '' || url === 'about:blank') return null;
-        const adHosts = /doubleclick|googlesyndication|adnxs|popunder|clickunder|trafficjunky|exoclick|adcash|propellerads|popcash/i;
-        if (adHosts.test(url)) return null;
-        return _realOpen(url, target, features);
-    };
-    function isObfuscated(src) {
-        return src && /br[a-z0-9]+.com|advert|popunder|clickunder/i.test(src);
-    }
-    function isAd(el) {
-        return el.id && /^sidebarad/.test(el.id);
-    }
-    function nukeEl(el) {
-        let t = el;
-        while (t && t !== document.documentElement) {
-            if (isAd(t)) { t.remove(); return; }
-            t = t.parentElement;
-        }
-        el.remove();
-    }
-    function nuke(root) {
-        root.querySelectorAll('[id^="sidebarad"],[class~="sidebar-frame"],[class~="sidebar-close"]')
-            .forEach(nukeEl);
-        root.querySelectorAll('script[src]').forEach(s => {
-            if (isObfuscated(s.src)) s.remove();
-        });
-    }
-    new MutationObserver(function(ms){
-        for(var i=0;i<ms.length;i++){
-            var nodes=ms[i].addedNodes;
-            for(var j=0;j<nodes.length;j++){
-                var n=nodes[j];
-                if(n.nodeType!==1) continue;
-                if(n.tagName==='SCRIPT' && isObfuscated(n.src)) { n.remove(); continue; }
-                if(isAd(n)||n.classList.contains('sidebar-frame')||n.classList.contains('sidebar-close'))
-                    { n.remove(); continue; }
-                nuke(n);
-            }
-        }
-    }).observe(document.documentElement,{childList:true,subtree:true});
-    document.addEventListener('DOMContentLoaded',function(){nuke(document);});
-}());</script><script>(function(){
     var OLD_APPID = "14527028-e469-4b6a-bf21-2ba4f5ed0d9b";
     var NEW_APPID = "ddc2c875-d8bd-4399-895a-459e22383f0a";
     var encoder = new TextEncoder();
@@ -172,9 +103,6 @@
     if (_origFetch) {
         window.fetch = function(resource, init) {
             var url = typeof resource === "string" ? resource : (resource && resource.url) || "";
-            if (url.indexOf("UnityServicesProjectConfiguration.json") !== -1) {
-                return Promise.resolve(new Response(JSON.stringify({ Keys: [], Values: [] }), { status: 200, statusText: "OK (local fallback, no StreamingAssets bundled)" }));
-            }
             if (url.indexOf("config.services.api.unity.com/settings") === -1) {
                 return _origFetch(resource, init);
             }
@@ -202,25 +130,10 @@
     var _origXHROpen = XMLHttpRequest.prototype.open;
     XMLHttpRequest.prototype.open = function(method, url) {
         this.__cfgIntercept = typeof url === "string" && url.indexOf("config.services.api.unity.com/settings") !== -1;
-        this.__servicesConfigIntercept = typeof url === "string" && url.indexOf("UnityServicesProjectConfiguration.json") !== -1;
         return _origXHROpen.apply(this, arguments);
     };
     var _origXHRSend = XMLHttpRequest.prototype.send;
     XMLHttpRequest.prototype.send = function(body) {
-        if (this.__servicesConfigIntercept) {
-            var self = this;
-            var fallbackBody = JSON.stringify({ Keys: [], Values: [] });
-            setTimeout(function() {
-                Object.defineProperty(self, "readyState", { get: function() { return 4; }, configurable: true });
-                Object.defineProperty(self, "status", { get: function() { return 200; }, configurable: true });
-                Object.defineProperty(self, "responseText", { get: function() { return fallbackBody; }, configurable: true });
-                Object.defineProperty(self, "response", { get: function() { return fallbackBody; }, configurable: true });
-                self.dispatchEvent(new Event("readystatechange"));
-                self.dispatchEvent(new Event("load"));
-                self.dispatchEvent(new Event("loadend"));
-            }, 0);
-            return;
-        }
         if (this.__cfgIntercept) {
             var self = this;
             var _settled = false;
