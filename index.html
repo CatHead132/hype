@@ -2,20 +2,6 @@
     try {
         Object.defineProperty(document, "URL", { get: function() { return "https://localhost/"; }, configurable: true });
     } catch (e) {}
-    try {
-        var desc = Object.getOwnPropertyDescriptor(HTMLScriptElement.prototype, "src") ||
-                    Object.getOwnPropertyDescriptor(Object.getPrototypeOf(HTMLScriptElement.prototype), "src");
-        Object.defineProperty(HTMLScriptElement.prototype, "src", {
-            get: desc.get,
-            set: function(value) {
-                if (typeof value === "string" && value.indexOf("sdk.crazygames.com/crazygames-sdk-v3") !== -1) {
-                    value = "crazygames-sdk-v3-e.js";
-                }
-                return desc.set.call(this, value);
-            },
-            configurable: true
-        });
-    } catch (e) {}
 })();</script>
 <script>(function(){
     window._loadedBytes = 0;
