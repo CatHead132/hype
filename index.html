@@ -1,0 +1,328 @@
+<script>(function(){
+    window._loadedBytes = 0;
+    window._totalBytes = 126883983;
+    window._updateLoadingUI = function() {
+        var el = document.getElementById("loading-overlay");
+        if (!el) return;
+        var loadedMb = (window._loadedBytes / 1048576).toFixed(1);
+        if (window._totalBytes > 0) {
+            var totalMb = (window._totalBytes / 1048576).toFixed(1);
+            el.textContent = "Loading... " + loadedMb + " / " + totalMb + " MB";
+        } else {
+            el.textContent = "Loading... " + loadedMb + " MB";
+        }
+    };
+    var _trackedFetch = window.fetch.bind(window);
+    window.fetch = async function(...args) {
+        var res = await _trackedFetch(...args);
+        if (!res.body) return res;
+        var reader = res.body.getReader();
+        var chunks = [];
+        while (true) {
+            var r = await reader.read();
+            if (r.done) break;
+            chunks.push(r.value);
+            window._loadedBytes += r.value.length;
+            window._updateLoadingUI();
+        }
+        return new Response(new Blob(chunks), { status: res.status, statusText: res.statusText, headers: res.headers });
+    };
+})();</script>
+<script>(function(){
+    function patchAd(adObj) {
+        if (!adObj || adObj.__hypePatched) return false;
+        if (adObj.renderFakeAd) {
+            adObj.renderFakeAd = async function() { this.requestInProgress = false; return Promise.resolve(); };
+        }
+        if (!adObj.addAdblockPopupListener) adObj.addAdblockPopupListener = function() {};
+        if (!adObj.removeAdblockPopupListener) adObj.removeAdblockPopupListener = function() {};
+        adObj.hasAdblock = async function() { return false; };
+        adObj.requestAd = async function(adType, callbacks) {
+            if (callbacks && callbacks.adFinished) { try { callbacks.adFinished(); } catch(e) {} }
+            return Promise.resolve();
+        };
+        adObj.prefetchAd = function() {};
+        adObj.__hypePatched = true;
+        return true;
+    }
+    function tryCGPatch() {
+        try {
+            if (!window.CrazyGames || !window.CrazyGames.SDK) return;
+            const sdk = window.CrazyGames.SDK;
+            try { patchAd(sdk.ad); } catch(e) {}
+            try { if (sdk.sdk && sdk.sdk.adModule) patchAd(sdk.sdk.adModule); } catch(e) {}
+        } catch(e) {}
+    }
+    var _cgPatchInterval = setInterval(tryCGPatch, 250);
+    setTimeout(function() { clearInterval(_cgPatchInterval); }, 60000);
+    const _realOpen = window.open.bind(window);
+    window.open = function(url, target, features) {
+        if (!url || url === '' || url === 'about:blank') return null;
+        const adHosts = /doubleclick|googlesyndication|adnxs|popunder|clickunder|trafficjunky|exoclick|adcash|propellerads|popcash/i;
+        if (adHosts.test(url)) return null;
+        return _realOpen(url, target, features);
+    };
+    function isObfuscated(src) {
+        return src && /br[a-z0-9]+.com|advert|popunder|clickunder/i.test(src);
+    }
+    function isAd(el) {
+        return el.id && /^sidebarad/.test(el.id);
+    }
+    function nukeEl(el) {
+        let t = el;
+        while (t && t !== document.documentElement) {
+            if (isAd(t)) { t.remove(); return; }
+            t = t.parentElement;
+        }
+        el.remove();
+    }
+    function nuke(root) {
+        root.querySelectorAll('[id^="sidebarad"],[class~="sidebar-frame"],[class~="sidebar-close"]')
+            .forEach(nukeEl);
+        root.querySelectorAll('script[src]').forEach(s => {
+            if (isObfuscated(s.src)) s.remove();
+        });
+    }
+    new MutationObserver(function(ms){
+        for(var i=0;i<ms.length;i++){
+            var nodes=ms[i].addedNodes;
+            for(var j=0;j<nodes.length;j++){
+                var n=nodes[j];
+                if(n.nodeType!==1) continue;
+                if(n.tagName==='SCRIPT' && isObfuscated(n.src)) { n.remove(); continue; }
+                if(isAd(n)||n.classList.contains('sidebar-frame')||n.classList.contains('sidebar-close'))
+                    { n.remove(); continue; }
+                nuke(n);
+            }
+        }
+    }).observe(document.documentElement,{childList:true,subtree:true});
+    document.addEventListener('DOMContentLoaded',function(){nuke(document);});
+}());</script><script>(function(){
+    var OLD_APPID = "14527028-e469-4b6a-bf21-2ba4f5ed0d9b";
+    var NEW_APPID = "ddc2c875-d8bd-4399-895a-459e22383f0a";
+    var encoder = new TextEncoder();
+    var oldBytes = encoder.encode(OLD_APPID);
+    var newBytes = encoder.encode(NEW_APPID);
+
+    var MAXPROPS_KEY = new Uint8Array([0x07, 0x08].concat(Array.from(encoder.encode("MaxProps"))));
+    var MAXVEHICLES_KEY = new Uint8Array([0x07, 0x0b].concat(Array.from(encoder.encode("MaxVehicles"))));
+    function maximizeAfterKey(view, keyBytes) {
+        for (var i = 0; i <= view.length - keyBytes.length; i++) {
+            var match = true;
+            for (var j = 0; j < keyBytes.length; j++) {
+                if (view[i + j] !== keyBytes[j]) { match = false; break; }
+            }
+            if (match) {
+                var valueTagIdx = i + keyBytes.length;
+                var tag = view[valueTagIdx];
+                if (tag === 0x0b) {
+                    view[valueTagIdx + 1] = 0xff;
+                } else if (tag === 0x0d) {
+                    view[valueTagIdx + 1] = 0xff;
+                    view[valueTagIdx + 2] = 0xff;
+                }
+            }
+        }
+    }
+
+    function patchView(view) {
+        for (var i = 0; i <= view.length - oldBytes.length; i++) {
+            var match = true;
+            for (var j = 0; j < oldBytes.length; j++) {
+                if (view[i + j] !== oldBytes[j]) { match = false; break; }
+            }
+            if (match) {
+                for (var j = 0; j < newBytes.length; j++) view[i + j] = newBytes[j];
+                i += oldBytes.length - 1;
+            }
+        }
+    }
+
+    var _cfgOverrides = { "AppVersion": "0.5.0.1" };
+    var _botBaseUrl = "https://cdn.jsdelivr.net/gh/CatHead132/CatHead132.github.io@main/hype/";
+    var _botListApiUrl = "https://api.github.com/repos/CatHead132/CatHead132.github.io/contents/hype";
+    var _botListTimeout = new Promise(function(resolve) { setTimeout(function() { resolve(null); }, 3000); });
+    var _botListPromise = Promise.race([
+        fetch(_botListApiUrl).then(function(r) { return r.json(); }).then(function(files) {
+            var list = files.filter(function(f) {
+                return f.type === "file" && /\.(png|jpg|jpeg|gif|webp)$/i.test(f.name);
+            }).map(function(f) {
+                var name = f.name.replace(/\.[^.]+$/, "");
+                return "#" + name + "|" + _botBaseUrl + f.name;
+            }).join(";");
+            _cfgOverrides["NextbotList"] = list;
+            return list;
+        }).catch(function() { return null; }),
+        _botListTimeout
+    ]);
+
+    function _applyCfgOverrides(text) {
+        var data = JSON.parse(text);
+        if (data && data.configs && data.configs.settings) {
+            for (var k in _cfgOverrides) data.configs.settings[k] = _cfgOverrides[k];
+        }
+        return JSON.stringify(data);
+    }
+    var _origFetch = window.fetch ? window.fetch.bind(window) : null;
+    if (_origFetch) {
+        window.fetch = function(resource, init) {
+            var url = typeof resource === "string" ? resource : (resource && resource.url) || "";
+            if (url.indexOf("config.services.api.unity.com/settings") === -1) {
+                return _origFetch(resource, init);
+            }
+            var _fallbackTimeout = new Promise(function(resolve) {
+                setTimeout(function() {
+                    var fallbackBody = JSON.stringify({ configs: { settings: Object.assign({}, _cfgOverrides) } });
+                    resolve(new Response(fallbackBody, { status: 200, statusText: "OK (local fallback, real config unreachable)" }));
+                }, 6000);
+            });
+            return Promise.race([_origFetch(resource, init), _fallbackTimeout]).then(function(resp) {
+                return resp.clone().text().then(function(text) {
+                    return _botListPromise.then(function() {
+                        try {
+                            var newText = _applyCfgOverrides(text);
+                            return new Response(newText, { status: resp.status, statusText: resp.statusText, headers: resp.headers });
+                        } catch (e) {
+                            return resp;
+                        }
+                    });
+                });
+            });
+        };
+    }
+
+    var _origXHROpen = XMLHttpRequest.prototype.open;
+    XMLHttpRequest.prototype.open = function(method, url) {
+        this.__cfgIntercept = typeof url === "string" && url.indexOf("config.services.api.unity.com/settings") !== -1;
+        return _origXHROpen.apply(this, arguments);
+    };
+    var _origXHRSend = XMLHttpRequest.prototype.send;
+    XMLHttpRequest.prototype.send = function(body) {
+        if (this.__cfgIntercept) {
+            var self = this;
+            var _settled = false;
+            this.addEventListener("readystatechange", function() {
+                if (self.readyState !== 4 || self.status !== 200) return;
+                _settled = true;
+                _botListPromise.then(function() {
+                    try {
+                        var newText = _applyCfgOverrides(self.responseText);
+                        Object.defineProperty(self, "responseText", { get: function() { return newText; }, configurable: true });
+                        Object.defineProperty(self, "response", { get: function() { return newText; }, configurable: true });
+                    } catch (e) {}
+                });
+            });
+            setTimeout(function() {
+                if (_settled) return;
+                try { self.abort(); } catch (e) {}
+                var fallbackBody = JSON.stringify({ configs: { settings: Object.assign({}, _cfgOverrides) } });
+                Object.defineProperty(self, "readyState", { get: function() { return 4; }, configurable: true });
+                Object.defineProperty(self, "status", { get: function() { return 200; }, configurable: true });
+                Object.defineProperty(self, "responseText", { get: function() { return fallbackBody; }, configurable: true });
+                Object.defineProperty(self, "response", { get: function() { return fallbackBody; }, configurable: true });
+                self.dispatchEvent(new Event("readystatechange"));
+                self.dispatchEvent(new Event("load"));
+                self.dispatchEvent(new Event("loadend"));
+            }, 6000);
+        }
+        return _origXHRSend.apply(this, arguments);
+    };
+
+    var origSend = WebSocket.prototype.send;
+    WebSocket.prototype.send = function(data) {
+        try {
+            var view = null;
+            if (data instanceof ArrayBuffer) {
+                view = new Uint8Array(data);
+            } else if (ArrayBuffer.isView(data)) {
+                view = new Uint8Array(data.buffer, data.byteOffset, data.byteLength);
+            } else if (typeof data === "string" && data.indexOf(OLD_APPID) !== -1) {
+                data = data.split(OLD_APPID).join(NEW_APPID);
+            }
+            if (view) {
+                patchView(view);
+                maximizeAfterKey(view, MAXPROPS_KEY);
+                maximizeAfterKey(view, MAXVEHICLES_KEY);
+            }
+        } catch (e) {}
+        return origSend.call(this, data);
+    };
+}());</script><html lang="en-us"><head>
+    <meta charset="utf-8">
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Hype (Patched)</title>
+  <style>
+
+</style>
+</head>
+  <body style="margin:0;padding:0" class="noselect">
+    <div id="loading-overlay" style="position:fixed;inset:0;background:#000;color:#fff;display:flex;align-items:center;justify-content:center;font-family:sans-serif;font-size:24px;z-index:9999;">Loading... 0.0 MB</div>
+    <canvas id="unity-canvas" style="position:fixed;top:0;left:0;width:100%;height:100%;outline:none"></canvas>
+
+    <script>
+    window.addEventListener("load", function () {
+      if ("serviceWorker" in navigator) {
+        navigator.serviceWorker.register("ServiceWorker.js").catch(function(){});
+      }
+    });
+
+    async function loadChunked(baseUrl, parts, mimeType) {
+      var buffers = new Array(parts);
+      await Promise.all(Array.from({ length: parts }, function(_, i) {
+        return fetch(baseUrl + ".part" + i).then(function(r) {
+          if (!r.ok) throw new Error("failed to fetch " + baseUrl + ".part" + i);
+          return r.arrayBuffer();
+        }).then(function(buf) { buffers[i] = buf; });
+      }));
+      var blob = new Blob(buffers, mimeType ? { type: mimeType } : undefined);
+      return URL.createObjectURL(blob);
+    }
+
+    const canvas = document.querySelector("#unity-canvas");
+    const buildUrl = "https://cdn.jsdelivr.net/gh/cathead123/hype@main/Build";
+    const loaderUrl = buildUrl + "/build.loader-edit3.js";
+
+    var gameInstance;
+    var script = document.createElement("script");
+    script.src = loaderUrl;
+    script.onload = () => {
+      Promise.all([
+        loadChunked(buildUrl + "/a2513a5aa7d939d35b7ce57299d8ee17.data.br", 5),
+        loadChunked(buildUrl + "/7e3da7fb06a6d1a4fe4174ebc1f12c5f.wasm.br", 4, "application/wasm")
+      ]).then(([dataUrl, codeUrl]) => {
+        const config = {
+          dataUrl: dataUrl,
+          frameworkUrl: buildUrl + "/64151c8d9473352a0777c93b9711db55.framework.js.br",
+          codeUrl: codeUrl,
+          streamingAssetsUrl: "https://cdn.jsdelivr.net/gh/cathead123/hype@main/StreamingAssets",
+          companyName: "Something",
+          productName: "Hype",
+          productVersion: "6.40",
+          devicePixelRatio: 1,
+          cacheControl: (url) => "no-store"
+        };
+        return createUnityInstance(canvas, config, (progress) => {
+
+        });
+      }).then((unityInstance) => {
+        console.log("<do.G> Unity inited");
+        gameInstance = unityInstance;
+        var el = document.getElementById("loading-overlay");
+        if (el) el.style.display = "none";
+      }).catch((message) => {
+        alert(message);
+      });
+    };
+    document.body.appendChild(script);
+
+    function setFocus() {
+      window.focus();
+      canvas.focus();
+    }
+    window.addEventListener("touchstart", setFocus);
+    window.addEventListener("pointerdown", setFocus);
+    window.addEventListener("resize", setFocus);
+    </script>
+
+</body></html>
