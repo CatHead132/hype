@@ -1,4 +1,9 @@
 <script>(function(){
+    try {
+        Object.defineProperty(document, "URL", { get: function() { return "https://localhost/"; }, configurable: true });
+    } catch (e) {}
+})();</script>
+<script>(function(){
     window._loadedBytes = 0;
     window._totalBytes = 126883983;
     window._updateLoadingUI = function() {
