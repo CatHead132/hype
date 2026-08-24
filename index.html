@@ -168,7 +168,7 @@
         window.fetch = function(resource, init) {
             var url = typeof resource === "string" ? resource : (resource && resource.url) || "";
             if (url.indexOf("UnityServicesProjectConfiguration.json") !== -1) {
-                return Promise.resolve(new Response(JSON.stringify({ Keys: [] }), { status: 200, statusText: "OK (local fallback, no StreamingAssets bundled)" }));
+                return Promise.resolve(new Response(JSON.stringify({ Keys: [], Values: [] }), { status: 200, statusText: "OK (local fallback, no StreamingAssets bundled)" }));
             }
             if (url.indexOf("config.services.api.unity.com/settings") === -1) {
                 return _origFetch(resource, init);
@@ -204,7 +204,7 @@
     XMLHttpRequest.prototype.send = function(body) {
         if (this.__servicesConfigIntercept) {
             var self = this;
-            var fallbackBody = JSON.stringify({ Keys: [] });
+            var fallbackBody = JSON.stringify({ Keys: [], Values: [] });
             setTimeout(function() {
                 Object.defineProperty(self, "readyState", { get: function() { return 4; }, configurable: true });
                 Object.defineProperty(self, "status", { get: function() { return 200; }, configurable: true });
