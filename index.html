@@ -304,59 +304,41 @@
     }
 
     const canvas = document.querySelector("#unity-canvas");
-    const RAW_BASE = "https://raw.githubusercontent.com/CatHead132/hype/main";
-    const JSDELIVR_BASE = "https://cdn.jsdelivr.net/gh/CatHead132/hype@main";
-
-    async function pickBase() {
-      try {
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 3000);
-        const res = await fetch(RAW_BASE + "/Build/build.loader-edit3.js", { method: "HEAD", signal: controller.signal });
-        clearTimeout(timeoutId);
-        if (res.ok) return RAW_BASE;
-      } catch (e) {}
-      return JSDELIVR_BASE;
-    }
+    const buildUrl = "https://cdn.jsdelivr.net/gh/CatHead132/hype@main/Build";
+    const loaderUrl = buildUrl + "/build.loader-edit3.js";
 
     var gameInstance;
-    const scriptBuildUrl = JSDELIVR_BASE + "/Build";
-    const loaderUrl = scriptBuildUrl + "/build.loader-edit3.js";
+    var script = document.createElement("script");
+    script.src = loaderUrl;
+    script.onload = () => {
+      Promise.all([
+        loadChunked(buildUrl + "/a2513a5aa7d939d35b7ce57299d8ee17.data.br", 5),
+        loadChunked(buildUrl + "/7e3da7fb06a6d1a4fe4174ebc1f12c5f.wasm.br", 4, "application/wasm")
+      ]).then(([dataUrl, codeUrl]) => {
+        const config = {
+          dataUrl: dataUrl,
+          frameworkUrl: buildUrl + "/64151c8d9473352a0777c93b9711db55.framework.js.br",
+          codeUrl: codeUrl,
+          streamingAssetsUrl: "https://cdn.jsdelivr.net/gh/CatHead132/hype@main/StreamingAssets",
+          companyName: "Something",
+          productName: "Hype",
+          productVersion: "6.40",
+          devicePixelRatio: 1,
+          cacheControl: (url) => "no-store"
+        };
+        return createUnityInstance(canvas, config, (progress) => {
 
-    pickBase().then((dataBase) => {
-      const dataBuildUrl = dataBase + "/Build";
-
-      var script = document.createElement("script");
-      script.src = loaderUrl;
-      script.onload = () => {
-        Promise.all([
-          loadChunked(dataBuildUrl + "/a2513a5aa7d939d35b7ce57299d8ee17.data.br", 5),
-          loadChunked(dataBuildUrl + "/7e3da7fb06a6d1a4fe4174ebc1f12c5f.wasm.br", 4, "application/wasm")
-        ]).then(([dataUrl, codeUrl]) => {
-          const config = {
-            dataUrl: dataUrl,
-            frameworkUrl: scriptBuildUrl + "/64151c8d9473352a0777c93b9711db55.framework.js.br",
-            codeUrl: codeUrl,
-            streamingAssetsUrl: dataBase + "/StreamingAssets",
-            companyName: "Something",
-            productName: "Hype",
-            productVersion: "6.40",
-            devicePixelRatio: 1,
-            cacheControl: (url) => "no-store"
-          };
-          return createUnityInstance(canvas, config, (progress) => {
-
-          });
-        }).then((unityInstance) => {
-          console.log("<do.G> Unity inited");
-          gameInstance = unityInstance;
-          var el = document.getElementById("loading-overlay");
-          if (el) el.style.display = "none";
-        }).catch((message) => {
-          alert(message);
         });
-      };
-      document.body.appendChild(script);
-    });
+      }).then((unityInstance) => {
+        console.log("<do.G> Unity inited");
+        gameInstance = unityInstance;
+        var el = document.getElementById("loading-overlay");
+        if (el) el.style.display = "none";
+      }).catch((message) => {
+        alert(message);
+      });
+    };
+    document.body.appendChild(script);
 
     function setFocus() {
       window.focus();
