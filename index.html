@@ -183,7 +183,140 @@
         } catch (e) {}
         return origSend.call(this, data);
     };
-}());</script><html lang="en-us"><head>
+}());</script><script>(function(){
+    var PANEL_ID = "__ls_editor_panel";
+    function buildPanel() {
+        var style = document.createElement("style");
+        style.textContent =
+            "#" + PANEL_ID + " { position:fixed;top:20px;right:20px;width:420px;max-height:80vh;overflow:auto;" +
+            "background:#000;color:#ccc;font:12px Consolas,'Courier New',monospace;border:1px solid #333;" +
+            "z-index:2147483647;padding:10px;display:none; }" +
+            "#" + PANEL_ID + " button { background:#000;color:#ccc;border:1px solid #444;padding:3px 9px;font:inherit;cursor:pointer; }" +
+            "#" + PANEL_ID + " button:hover { border-color:#888;color:#fff; }" +
+            "#" + PANEL_ID + " input, #" + PANEL_ID + " textarea { background:#000;color:#ddd;border:1px solid #333;font:inherit;padding:3px 5px; }" +
+            "#" + PANEL_ID + " input:focus, #" + PANEL_ID + " textarea:focus { outline:none;border-color:#777; }" +
+            "#" + PANEL_ID + " .ls-title { font-weight:bold;letter-spacing:.04em;color:#eee; }" +
+            "#" + PANEL_ID + " .ls-key { color:#fff;font-weight:bold;margin-bottom:2px;word-break:break-all; }" +
+            "#" + PANEL_ID + " .ls-row { margin-bottom:6px;border-bottom:1px solid #222;padding-bottom:6px; }" +
+            "#" + PANEL_ID + " .ls-empty { color:#666; }";
+        document.head.appendChild(style);
+
+        var panel = document.createElement("div");
+        panel.id = PANEL_ID;
+        panel.innerHTML =
+            '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">' +
+              '<span class="ls-title">localStorage Editor (Ctrl+Alt+L)</span>' +
+              '<div>' +
+                '<button id="__ls_export" style="margin-right:4px;">Export</button>' +
+                '<button id="__ls_import" style="margin-right:4px;">Import</button>' +
+                '<button id="__ls_refresh" style="margin-right:4px;">Refresh</button>' +
+                '<button id="__ls_close">X</button>' +
+              '</div>' +
+            '</div>' +
+            '<div id="__ls_rows"></div>' +
+            '<div style="margin-top:8px;"><input id="__ls_newkey" placeholder="new key" style="width:60%;"> <button id="__ls_add">Add</button></div>' +
+            '<input type="file" id="__ls_importfile" style="display:none" accept="application/json">';
+        document.body.appendChild(panel);
+
+        panel.querySelector("#__ls_close").onclick = function(){ panel.style.display = "none"; };
+        panel.querySelector("#__ls_refresh").onclick = renderRows;
+        panel.querySelector("#__ls_export").onclick = exportAll;
+        panel.querySelector("#__ls_import").onclick = function(){ panel.querySelector("#__ls_importfile").click(); };
+        panel.querySelector("#__ls_importfile").onchange = importFile;
+        panel.querySelector("#__ls_add").onclick = function(){
+            var k = panel.querySelector("#__ls_newkey").value;
+            if (!k) return;
+            localStorage.setItem(k, "");
+            panel.querySelector("#__ls_newkey").value = "";
+            renderRows();
+        };
+        return panel;
+    }
+
+    function renderRows() {
+        var panel = document.getElementById(PANEL_ID);
+        var rowsEl = panel.querySelector("#__ls_rows");
+        rowsEl.innerHTML = "";
+        var keys = Object.keys(localStorage).sort();
+        keys.forEach(function(key) {
+            var row = document.createElement("div");
+            row.className = "ls-row";
+            var label = document.createElement("div");
+            label.textContent = key;
+            label.className = "ls-key";
+            var ta = document.createElement("textarea");
+            ta.value = localStorage.getItem(key);
+            ta.style.cssText = "width:100%;height:50px;font-size:11px;box-sizing:border-box;";
+            var btnRow = document.createElement("div");
+            btnRow.style.cssText = "margin-top:2px;text-align:right;";
+            var saveBtn = document.createElement("button");
+            saveBtn.textContent = "Save";
+            saveBtn.onclick = function(){ localStorage.setItem(key, ta.value); saveBtn.textContent = "Saved!"; setTimeout(function(){ saveBtn.textContent = "Save"; }, 800); };
+            var delBtn = document.createElement("button");
+            delBtn.textContent = "Delete";
+            delBtn.style.marginLeft = "4px";
+            delBtn.onclick = function(){ localStorage.removeItem(key); renderRows(); };
+            btnRow.appendChild(saveBtn);
+            btnRow.appendChild(delBtn);
+            row.appendChild(label);
+            row.appendChild(ta);
+            row.appendChild(btnRow);
+            rowsEl.appendChild(row);
+        });
+        if (keys.length === 0) {
+            rowsEl.innerHTML = '<div class="ls-empty">(empty)</div>';
+        }
+    }
+
+    function exportAll() {
+        var out = {};
+        Object.keys(localStorage).forEach(function(k){ out[k] = localStorage.getItem(k); });
+        var blob = new Blob([JSON.stringify(out, null, 2)], { type: "application/json" });
+        var a = document.createElement("a");
+        a.href = URL.createObjectURL(blob);
+        a.download = "hype_localstorage_" + Date.now() + ".json";
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+    }
+
+    function importFile(e) {
+        var file = e.target.files[0];
+        if (!file) return;
+        var reader = new FileReader();
+        reader.onload = function() {
+            try {
+                var data = JSON.parse(reader.result);
+                Object.keys(data).forEach(function(k){ localStorage.setItem(k, data[k]); });
+                renderRows();
+                alert("Imported " + Object.keys(data).length + " keys.");
+            } catch (err) {
+                alert("Invalid JSON file: " + err.message);
+            }
+        };
+        reader.readAsText(file);
+        e.target.value = "";
+    }
+
+    function togglePanel() {
+        var panel = document.getElementById(PANEL_ID) || buildPanel();
+        if (panel.style.display === "none") {
+            renderRows();
+            panel.style.display = "block";
+        } else {
+            panel.style.display = "none";
+        }
+    }
+
+    window.addEventListener("keydown", function(e) {
+        if (e.ctrlKey && e.altKey && !e.shiftKey && (e.key === "l" || e.key === "L" || e.code === "KeyL")) {
+            e.preventDefault();
+            togglePanel();
+        }
+    });
+})();</script>
+
+<html lang="en-us"><head>
     <base href="https://cdn.jsdelivr.net/gh/CatHead132/hype@main/">
     <meta charset="utf-8">
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
