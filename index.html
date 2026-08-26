@@ -5,7 +5,7 @@
 })();</script>
 <script>(function(){
     window._loadedBytes = 0;
-    window._totalBytes = 126883678;
+    window._totalBytes = 126910165;
     window._updateLoadingUI = function() {
         var el = document.getElementById("loading-overlay");
         if (!el) return;
@@ -39,27 +39,6 @@
     var encoder = new TextEncoder();
     var oldBytes = encoder.encode(OLD_APPID);
     var newBytes = encoder.encode(NEW_APPID);
-
-    var MAXPROPS_KEY = new Uint8Array([0x07, 0x08].concat(Array.from(encoder.encode("MaxProps"))));
-    var MAXVEHICLES_KEY = new Uint8Array([0x07, 0x0b].concat(Array.from(encoder.encode("MaxVehicles"))));
-    function maximizeAfterKey(view, keyBytes) {
-        for (var i = 0; i <= view.length - keyBytes.length; i++) {
-            var match = true;
-            for (var j = 0; j < keyBytes.length; j++) {
-                if (view[i + j] !== keyBytes[j]) { match = false; break; }
-            }
-            if (match) {
-                var valueTagIdx = i + keyBytes.length;
-                var tag = view[valueTagIdx];
-                if (tag === 0x0b) {
-                    view[valueTagIdx + 1] = 0xff;
-                } else if (tag === 0x0d) {
-                    view[valueTagIdx + 1] = 0xff;
-                    view[valueTagIdx + 2] = 0xff;
-                }
-            }
-        }
-    }
 
     function patchView(view) {
         for (var i = 0; i <= view.length - oldBytes.length; i++) {
@@ -177,8 +156,6 @@
             }
             if (view) {
                 patchView(view);
-                maximizeAfterKey(view, MAXPROPS_KEY);
-                maximizeAfterKey(view, MAXVEHICLES_KEY);
             }
         } catch (e) {}
         return origSend.call(this, data);
