@@ -160,8 +160,7 @@
         } catch (e) {}
         return origSend.call(this, data);
     };
-}());</script>
-<script>(function(){
+}());</script><script>(function(){
     var PANEL_ID = "__ls_editor_panel";
     function buildPanel() {
         var style = document.createElement("style");
@@ -293,11 +292,13 @@
         }
     });
 })();</script>
+
 <html lang="en-us"><head>
+    <base href="https://cdn.jsdelivr.net/gh/CatHead132/hype@main/">
     <meta charset="utf-8">
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Hype (Patched, Local)</title>
+    <title>Hype (Patched)</title>
   <style>
 
 </style>
@@ -326,7 +327,7 @@
     }
 
     const canvas = document.querySelector("#unity-canvas");
-    const buildUrl = "Build";
+    const buildUrl = "https://cdn.jsdelivr.net/gh/CatHead132/hype@main/Build";
     const loaderUrl = buildUrl + "/build.loader-edit3.js";
 
     var gameInstance;
@@ -334,14 +335,14 @@
     script.src = loaderUrl;
     script.onload = () => {
       Promise.all([
-        loadChunked(buildUrl + "/build_1788812894.data", 21),
-        Promise.resolve(buildUrl + "/test_new.wasm")
+        loadChunked(buildUrl + "/a2513a5aa7d939d35b7ce57299d8ee17.data.br", 5),
+        loadChunked(buildUrl + "/7e3da7fb06a6d1a4fe4174ebc1f12c5f.wasm.br", 4, "application/wasm")
       ]).then(([dataUrl, codeUrl]) => {
         const config = {
           dataUrl: dataUrl,
-          frameworkUrl: buildUrl + "/test_new.framework.js",
+          frameworkUrl: buildUrl + "/64151c8d9473352a0777c93b9711db55.framework.js.br",
           codeUrl: codeUrl,
-          streamingAssetsUrl: "StreamingAssets",
+          streamingAssetsUrl: "https://cdn.jsdelivr.net/gh/CatHead132/hype@main/StreamingAssets",
           companyName: "Something",
           productName: "Hype",
           productVersion: "6.40",
