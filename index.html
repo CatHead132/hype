@@ -334,7 +334,7 @@
     script.src = loaderUrl;
     script.onload = () => {
       Promise.all([
-        Promise.resolve(buildUrl + "/build_1788812894.data"),
+        loadChunked(buildUrl + "/build_1788812894.data", 21),
         Promise.resolve(buildUrl + "/test_new.wasm")
       ]).then(([dataUrl, codeUrl]) => {
         const config = {
