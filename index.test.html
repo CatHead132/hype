@@ -335,11 +335,11 @@
     script.onload = () => {
       Promise.all([
         loadChunked(buildUrl + "/build_1788812894.data", 21),
-        Promise.resolve(buildUrl + "/test_new.wasm")
+        Promise.resolve(buildUrl + "/game.wasm")
       ]).then(([dataUrl, codeUrl]) => {
         const config = {
           dataUrl: dataUrl,
-          frameworkUrl: buildUrl + "/test_new.framework.js",
+          frameworkUrl: buildUrl + "/game.framework.js",
           codeUrl: codeUrl,
           streamingAssetsUrl: "StreamingAssets",
           companyName: "Something",
