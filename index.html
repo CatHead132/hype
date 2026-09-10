@@ -335,7 +335,7 @@
     script.src = loaderUrl;
     script.onload = () => {
       Promise.all([
-        loadChunked(buildUrl + "/build_1788812894.data", 21),
+        loadChunked(buildUrl + "/build_v8_1789005150.data", 21),
         loadChunked(buildUrl + "/game.wasm", 4, "application/wasm")
       ]).then(([dataUrl, codeUrl]) => {
         const config = {
